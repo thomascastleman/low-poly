@@ -11,19 +11,14 @@ class Triangle {
     this.v3 = p3.copy();
   }
   
-  // check if a point p satisfies the Delaunay condition of no points lying within the circumcircle of this triangle
-  boolean satisfiesDelaunay(PVector p) {
+  // check if point within circumcircle of this triangle
+  boolean containsInCircumcircle(PVector p) {
     // TODO write the function
     return true;
   }
   
-  void flip(Triangle t) {
-    PVector a, b;
-    
-  }
-  
-  // check if a point is inside this triangle
-  boolean isInside(PVector p) {
+  // check if a point is inside this triangle (coloring)
+  boolean contains(PVector p) {
     return true;
   }
   
