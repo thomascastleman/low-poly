@@ -32,4 +32,11 @@ class Triangle {
     // increment the number of pixels contributing to this average
     this.numPixels++;
   }
+  
+  // debug: display a triangle
+  void display() {
+    stroke(255);
+    noFill();
+    triangle(this.v1.x, this.v1.y, this.v2.x, this.v2.y, this.v3.x, this.v3.y);
+  }
 }
