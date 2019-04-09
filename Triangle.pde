@@ -15,8 +15,21 @@ class Triangle {
   
   // check if point within circumcircle of this triangle
   boolean containsInCircumcircle(PVector p) {
-    // TODO write the function
-    return true;
+      float ab = norm(this.v1);
+      float cd = norm(this.v2);
+      float ef = norm(this.v3);
+      
+      float circumX = (ab * (this.v3.y - this.v2.y) + cd * (this.v1.y - this.v3.y) + ef * (this.v2.y - this.v1.y)) / (this.v1.x * (this.v3.y - this.v2.y) + this.v2.x * (this.v1.y - this.v3.y) + this.v3.x * (this.v2.y - this.v1.y));
+      float circumY = (ab * (this.v3.x - this.v2.x) + cd * (this.v1.x - this.v3.x) + ef * (this.v2.x - this.v1.x)) / (this.v1.y * (this.v3.x - this.v2.x) + this.v2.y * (this.v1.x - this.v3.x) + this.v3.y * (this.v2.x - this.v1.x));
+    
+      PVector circum = new PVector(0.5f * circumX, 0.5f * circumY);
+      
+      // calc radius of circumcircle and distance of point from circumcircle center
+      float circumRadius = this.v1.dist(circum);
+      float pointDist = p.dist(circum);
+      
+      // if point within circumcircle radius, return true
+      return pointDist <= circumRadius;
   }
   
   // check if a point is inside this triangle (coloring)
@@ -40,5 +53,23 @@ class Triangle {
     stroke(255);
     noFill();
     triangle(this.v1.x, this.v1.y, this.v2.x, this.v2.y, this.v3.x, this.v3.y);
+    
+    
+    // // show circumcircle
+    //float ab = norm(this.v1);
+    //float cd = norm(this.v2);
+    //float ef = norm(this.v3);
+    
+    //float circumX = (ab * (this.v3.y - this.v2.y) + cd * (this.v1.y - this.v3.y) + ef * (this.v2.y - this.v1.y)) / (this.v1.x * (this.v3.y - this.v2.y) + this.v2.x * (this.v1.y - this.v3.y) + this.v3.x * (this.v2.y - this.v1.y));
+    //float circumY = (ab * (this.v3.x - this.v2.x) + cd * (this.v1.x - this.v3.x) + ef * (this.v2.x - this.v1.x)) / (this.v1.y * (this.v3.x - this.v2.x) + this.v2.y * (this.v1.x - this.v3.x) + this.v3.y * (this.v2.x - this.v1.x));
+  
+    //PVector circum = new PVector(0.5f * circumX, 0.5f * circumY);
+    
+    //// calc radius of circumcircle and distance of point from circumcircle center
+    //float circumRadius = this.v1.dist(circum);
+    
+    //strokeWeight(1);
+    //stroke(0, 255, 0);
+    //ellipse(circum.x, circum.y, circumRadius * 2, circumRadius * 2);
   }
 }

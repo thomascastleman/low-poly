@@ -38,9 +38,7 @@ class DelaunayTriangulation {
       polygon.clear();
       
       // add non-shared edges of bad triangles to polygonal hole
-      for (int i = 0; i < badTriangles.size(); i++) {
-        // TODO: add each non-shared edge to polygon (?)
-        
+      for (int i = 0; i < badTriangles.size(); i++) {        
         Triangle t = badTriangles.get(i);
         Edge edge;
         boolean shared;
