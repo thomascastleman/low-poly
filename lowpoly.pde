@@ -1,29 +1,30 @@
 
 import java.util.*;
 PImage src, dest;
-String url = "https://cdn.zmescience.com/wp-content/uploads/2014/03/poison-dart-frog.jpg"; //"https://ichef.bbci.co.uk/images/ic/720x405/p0517py6.jpg";
+String url = "https://i.kym-cdn.com/entries/icons/original/000/013/564/doge.jpg";
 
 void setup() {
-  size(1024, 605);
+  fullScreen(); //size(1024, 605);
   
   //stroke(255);
   //background(50);
-  
+
   //ArrayList<PVector> points = new ArrayList<PVector>();
-  
+
   //for (int i = 0; i < 25; i++) {
   //  points.add(new PVector((float) Math.random() * (width * 0.7), (float) Math.random() * (height * 0.7)));
   //  ellipse(points.get(i).x, points.get(i).y, 6, 6);
   //}
-  
+
   //DelaunayTriangulation t = new DelaunayTriangulation(points);
-  
+
   //t.display();
-  
-  
-  
-  
-  
+
+
+
+
+
+
   src = loadImage(url);
   dest = loadImage(url);
 
@@ -54,29 +55,36 @@ void setup() {
 
   // list to keep track of all points placed on image
   ArrayList<PVector> points = new ArrayList<PVector>();
-  
-  int borderPointInterval = floor(dest.width / 10);
+
+  int borderPointInterval = floor(dest.width / 9);
 
   // loop through all (x,y) positions in image
   for (int x = 0; x < dest.width; x++) {
-    
+
     // every n pixels, add a border
     if (x % borderPointInterval == 0) {
       // add top and bottom of screen points
       points.add(new PVector(x, 0));
       points.add(new PVector(x, dest.height - 1));
     }
-    
+
     for (int y = 0; y < dest.height; y++) {
+      // every n pixels, add a border
+      if (y % borderPointInterval == 0 && x == 0) {
+        // add top and bottom of screen points
+        points.add(new PVector(0, y));
+        points.add(new PVector(dest.width - 1, y));
+      }
+
       // calculate probability for this pixel to be a point based on energy
       float p = (float) (energies[x][y] / maxEnergy);
-      
+
       // scale down P a bit so it's not so intense
-      p *= 0.2;
+      p *= 0.3;
 
       // debug: display the energy value in dest image
       dest.set(x, y, color((int) map((float) energies[x][y], 0, (float) maxEnergy, 0, (float) maxEnergy / 10)));
-      
+
       // choose probabilistically to add a point here or not
       if (Math.random() < p) {
         points.add(new PVector(x, y));
@@ -84,17 +92,44 @@ void setup() {
     }
   }
 
-  image(dest, 0, 0);
-  
-  fill(0, 255, 0);
-  for (PVector p : points) {
-    // fill(src.get((int) p.x, (int) p.y));
-    ellipse(p.x, p.y, 5, 5);
+  println(points.size());
+
+  //image(dest, 0, 0);
+
+  //fill(0, 255, 0);
+  //for (PVector p : points) {
+  //  // fill(src.get((int) p.x, (int) p.y));
+  //  ellipse(p.x, p.y, 5, 5);
+  //}
+
+  // compute Delaunay triangulation on set of points placed on image
+  DelaunayTriangulation delTri = new DelaunayTriangulation(points);
+
+
+  print("Updating colors... ");
+  // loop through all (x,y) positions in image
+  for (int x = 0; x < src.width; x++) {    
+    for (int y = 0; y < src.height; y++) {
+      // for each triangle in triangulation
+      for (Triangle t : delTri.triangles) {
+        // if point within triangle
+        if (t.contains(new PVector(x, y))) {
+          // get color of this pixel
+          color pixColor = src.get(x, y);
+
+          // update color of this triangle to reflect average of pixels within it
+          t.updateAvgColor((int) red(pixColor), (int) green(pixColor), (int) blue(pixColor));
+
+          // break;
+        }
+      }
+    }
   }
-  
-  DelaunayTriangulation t = new DelaunayTriangulation(points);
-  
-  t.display();
+
+  println("Done.");
+
+  // display colored triangulation
+  delTri.display();
 }
 
 // find squared difference between each color value of two adjacent pixels

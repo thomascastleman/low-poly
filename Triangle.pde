@@ -34,7 +34,7 @@ class Triangle {
   
   // check if a point is inside this triangle (coloring)
   boolean contains(PVector p) {
-    return true;
+    return sameSide(p, this.v1, this.v2, this.v3) && sameSide(p, this.v2, this.v1, this.v3) && sameSide(p, this.v3, this.v1, this.v2);    
   }
   
   // update the average color of pixels within this triangle
@@ -50,8 +50,10 @@ class Triangle {
   
   // debug: display a triangle
   void display() {
-    stroke(255);
-    noFill();
+    //stroke(255);
+    //strokeWeight(1);
+    noStroke();
+    fill(this.r, this.g, this.b);
     triangle(this.v1.x, this.v1.y, this.v2.x, this.v2.y, this.v3.x, this.v3.y);
     
     
