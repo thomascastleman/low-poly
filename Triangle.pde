@@ -1,5 +1,4 @@
 
-
 class Triangle {
   PVector v1, v2, v3; // vertices of triangle
   PVector[] vertices;

@@ -37,8 +37,57 @@ class DelaunayTriangulation {
       // reset polygon edges to empty
       polygon.clear();
       
-      for (Triangle t : badTriangles) {
+      // add non-shared edges of bad triangles to polygonal hole
+      for (int i = 0; i < badTriangles.size(); i++) {
         // TODO: add each non-shared edge to polygon (?)
+        
+        Triangle t = badTriangles.get(i);
+        Edge edge;
+        boolean shared;
+        
+        for (int e = 0; e < 3; e++) {
+          // assume edge not shared
+          shared = false;
+          
+          if (e < 2) {
+            // construct edge from each pair of vertices
+            edge = new Edge(t.vertices[e], t.vertices[e + 1]);
+          } else {
+            // wrap around from vertex 2 to vertex 0
+            edge = new Edge(t.vertices[e], t.vertices[0]);
+          }
+          
+          // for all the other bad triangles
+          badTriangleLoop:
+          for (int j = 0; j < badTriangles.size(); j++) {
+            if (i != j) {
+              Triangle b = badTriangles.get(j);
+              Edge otherEdge;
+              
+              // check edges of other bad triangle
+              for (int e2 = 0; e2 < 3; e2++) {
+                if (e2 < 2) {
+                  // construct edge from each pair of vertices
+                  otherEdge = new Edge(b.vertices[e2], b.vertices[e2 + 1]);
+                } else {
+                  // wrap around from vertex 2 to vertex 0
+                  otherEdge = new Edge(b.vertices[e2], b.vertices[0]);
+                }
+                
+                // if edge is shared between bad triangles, break
+                if (edge.edgeEquals(otherEdge)) {
+                  shared = true;
+                  break badTriangleLoop;
+                }
+              }
+            }
+          }
+          
+          // if non-shared edge, add to polygon
+          if (!shared) {
+            polygon.add(edge);
+          }
+        }
       }
       
       // iterate over triangles in current triangulation
