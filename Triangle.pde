@@ -2,13 +2,16 @@
 
 class Triangle {
   PVector v1, v2, v3; // vertices of triangle
+  PVector[] vertices;
   float r, g, b;      // average RGB values of pixels within this triangle
   int numPixels;      // number of pixels contained within this triangle
+  boolean isBad;      // bad triangle flag for Delaunay triangulation
   
   Triangle(PVector p1, PVector p2, PVector p3) {
-    this.v1 = p1.copy();
-    this.v2 = p2.copy();
-    this.v3 = p3.copy();
+    this.vertices = new PVector[3];
+    this.vertices[0] = this.v1 = p1.copy();
+    this.vertices[1] = this.v2 = p2.copy();
+    this.vertices[2] = this.v3 = p3.copy();
   }
   
   // check if point within circumcircle of this triangle

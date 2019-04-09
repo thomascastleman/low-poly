@@ -6,10 +6,78 @@ class DelaunayTriangulation {
   
   // construct a Delaunay triangulation on a set of points
   DelaunayTriangulation(ArrayList<PVector> points) {
+    // debug: logs
+    System.out.print("Constructing Delaunay Triangulation... ");
+    
     // get the bounding super triangle for this point set
     Triangle superTriangle = this.getSuperTriangle(points);
     
-    superTriangle.display();
+    // add super triangle to triangulation
+    this.triangles.add(superTriangle);
+    
+    ArrayList<Triangle> badTriangles = new ArrayList<Triangle>();
+    ArrayList<Edge> polygon = new ArrayList<Edge>();
+    
+    // for each point
+    for (int p = 0; p < points.size(); p++) {
+      PVector point = points.get(p);
+      
+      // reset bad triangles to empty
+      badTriangles.clear();
+      
+      // for each triangle in triangulation
+      for (Triangle t : this.triangles) {
+        // if point lies within triangle's circumcircle
+        if (t.containsInCircumcircle(point)) {
+          badTriangles.add(t);
+          t.isBad = true;
+        }
+      }
+      
+      // reset polygon edges to empty
+      polygon.clear();
+      
+      for (Triangle t : badTriangles) {
+        // TODO: add each non-shared edge to polygon (?)
+      }
+      
+      // iterate over triangles in current triangulation
+      ListIterator<Triangle> iter = this.triangles.listIterator();
+      while(iter.hasNext()) {
+        Triangle t = iter.next();
+        
+        // remove if bad triangle
+        if (t.isBad) {
+          iter.remove();
+        }
+      }
+      
+      // for each edge in polygonal hole
+      for (Edge e : polygon) {
+        // add new triangle between this edge and point
+        this.triangles.add(new Triangle(point, e.v1, e.v2));
+      }
+    }
+    
+    // remove any triangles connected to super triangle vertices
+    ListIterator<Triangle> iter = this.triangles.listIterator();
+    while(iter.hasNext()) {
+      Triangle t = iter.next();
+      
+      // compare triangle vertices with super triangle vertices
+      outer:
+      for (int v = 0; v < t.vertices.length; v++) {
+        for (int s = 0; s < superTriangle.vertices.length; s++) {
+          // if share vertex, remove triangle
+          if (t.vertices[v].x == superTriangle.vertices[s].x && t.vertices[v].y == superTriangle.vertices[s].y) {
+            iter.remove();
+            break outer;
+          }
+        }
+      }
+    }
+    
+    println("Done.");
   }
   
   // construct bounding triangle that contains all points in set
@@ -20,6 +88,7 @@ class DelaunayTriangulation {
     for (int i = 0; i < points.size(); i++) {
       PVector p = points.get(i);
       
+      // update mins and maxes accordingly
       if (i == 0 || p.x < xMin)
         xMin = (int) p.x;
       if (i == 0 || p.x > xMax)
