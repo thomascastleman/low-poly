@@ -3,7 +3,7 @@ class Triangle {
   PVector v1, v2, v3; // vertices of triangle
   PVector[] vertices;
   float r, g, b;      // average RGB values of pixels within this triangle
-  int numPixels;      // number of pixels contained within this triangle
+  long numPixels;      // number of pixels contained within this triangle
   boolean isBad;      // bad triangle flag for Delaunay triangulation
   
   Triangle(PVector p1, PVector p2, PVector p3) {
@@ -43,6 +43,8 @@ class Triangle {
     this.r = (this.r * this.numPixels + r) / (this.numPixels + 1);
     this.g = (this.g * this.numPixels + g) / (this.numPixels + 1);
     this.b = (this.b * this.numPixels + b) / (this.numPixels + 1);
+    
+    println(this.numPixels);
     
     // increment the number of pixels contributing to this average
     this.numPixels++;

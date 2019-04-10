@@ -1,10 +1,10 @@
 
 import java.util.*;
 PImage src, dest;
-String url = "https://i.kym-cdn.com/entries/icons/original/000/013/564/doge.jpg";
+String url = "https://i.ytimg.com/vi/a_KqZdF4iNQ/maxresdefault.jpg"; // "https://i.kym-cdn.com/entries/icons/original/000/013/564/doge.jpg";
 
 void setup() {
-  fullScreen(); //size(1024, 605);
+  size(1280, 720);
   
   //stroke(255);
   //background(50);
@@ -80,7 +80,7 @@ void setup() {
       float p = (float) (energies[x][y] / maxEnergy);
 
       // scale down P a bit so it's not so intense
-      p *= 0.3;
+      p *= 0.25;
 
       // debug: display the energy value in dest image
       dest.set(x, y, color((int) map((float) energies[x][y], 0, (float) maxEnergy, 0, (float) maxEnergy / 10)));
@@ -92,9 +92,9 @@ void setup() {
     }
   }
 
-  println(points.size());
+  println(points.size() + " points.");
 
-  //image(dest, 0, 0);
+  image(src, 0, 0);
 
   //fill(0, 255, 0);
   //for (PVector p : points) {
@@ -105,22 +105,33 @@ void setup() {
   // compute Delaunay triangulation on set of points placed on image
   DelaunayTriangulation delTri = new DelaunayTriangulation(points);
 
+  // initialize previous container triangle randomly to start
+  Triangle last = delTri.triangles.size() > 0 ? delTri.triangles.get(0) : null;
 
   print("Updating colors... ");
-  // loop through all (x,y) positions in image
-  for (int x = 0; x < src.width; x++) {    
-    for (int y = 0; y < src.height; y++) {
-      // for each triangle in triangulation
-      for (Triangle t : delTri.triangles) {
-        // if point within triangle
-        if (t.contains(new PVector(x, y))) {
-          // get color of this pixel
-          color pixColor = src.get(x, y);
-
-          // update color of this triangle to reflect average of pixels within it
-          t.updateAvgColor((int) red(pixColor), (int) green(pixColor), (int) blue(pixColor));
-
-          // break;
+  // loop through every OTHER (x,y) position in image
+  for (int x = 0; x < src.width; x += 2) {    
+    for (int y = 0; y < src.height; y += 2) {
+      PVector p = new PVector(x, y);  // construct PVector at this point
+      color pixColor = src.get(x, y);  // get color of this pixel
+      
+      // if this point shares same container triangle as the previous point, don't search
+      if (last != null && last.contains(p)) {
+        // update color of this triangle to reflect average of pixels within it
+        last.updateAvgColor((int) red(pixColor), (int) green(pixColor), (int) blue(pixColor));
+      } else {
+        // linear search to find which triangle contains p
+        for (Triangle t : delTri.triangles) {
+          // if point within triangle
+          if (t.contains(p)) {
+            // update color of this triangle to reflect average of pixels within it
+            t.updateAvgColor((int) red(pixColor), (int) green(pixColor), (int) blue(pixColor));
+            
+            // preserve reference to the container triangle of this point
+            last = t;
+  
+            break;
+          }
         }
       }
     }
@@ -129,7 +140,7 @@ void setup() {
   println("Done.");
 
   // display colored triangulation
-  delTri.display();
+  //delTri.display();
 }
 
 // find squared difference between each color value of two adjacent pixels
