@@ -44,7 +44,9 @@ class Triangle {
     this.g = (this.g * this.numPixels + g) / (this.numPixels + 1);
     this.b = (this.b * this.numPixels + b) / (this.numPixels + 1);
     
-    println(this.numPixels);
+    // println(this.numPixels);
+    
+    //print(this.r + ", " + this.g + ", " + this.b + "\n");
     
     // increment the number of pixels contributing to this average
     this.numPixels++;

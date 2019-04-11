@@ -14,7 +14,7 @@ class DelaunayTriangulation {
     
     // add super triangle to triangulation
     this.triangles.add(superTriangle);
-    
+
     ArrayList<Triangle> badTriangles = new ArrayList<Triangle>();
     ArrayList<Edge> polygon = new ArrayList<Edge>();
     
@@ -162,9 +162,9 @@ class DelaunayTriangulation {
   
   // debug: display the triangulation
   void display() {
-    stroke(255);
-    strokeWeight(2);
-    noFill();
+    //stroke(255);
+    //strokeWeight(2);
+    //noFill();
     
     for (Triangle t : this.triangles) {
       t.display();

@@ -61,20 +61,20 @@ void setup() {
   // loop through all (x,y) positions in image
   for (int x = 0; x < dest.width; x++) {
 
-    // every n pixels, add a border
-    if (x % borderPointInterval == 0) {
-      // add top and bottom of screen points
-      points.add(new PVector(x, 0));
-      points.add(new PVector(x, dest.height - 1));
-    }
+    //// every n pixels, add a border
+    //if (x % borderPointInterval == 0) {
+    //  // add top and bottom of screen points
+    //  points.add(new PVector(x, 0));
+    //  points.add(new PVector(x, dest.height - 1));
+    //}
 
     for (int y = 0; y < dest.height; y++) {
-      // every n pixels, add a border
-      if (y % borderPointInterval == 0 && x == 0) {
-        // add top and bottom of screen points
-        points.add(new PVector(0, y));
-        points.add(new PVector(dest.width - 1, y));
-      }
+      //// every n pixels, add a border
+      //if (y % borderPointInterval == 0 && x == 0 && y != 0 && y != dest.height - 1) {
+      //  // add top and bottom of screen points
+      //  points.add(new PVector(0, y));
+      //  points.add(new PVector(dest.width - 1, y));
+      //}
 
       // calculate probability for this pixel to be a point based on energy
       float p = (float) (energies[x][y] / maxEnergy);
@@ -86,7 +86,7 @@ void setup() {
       dest.set(x, y, color((int) map((float) energies[x][y], 0, (float) maxEnergy, 0, (float) maxEnergy / 10)));
 
       // choose probabilistically to add a point here or not
-      if (Math.random() < p) {
+      if (Math.random() < p && x % borderPointInterval != 0 && y % borderPointInterval != 0) {
         points.add(new PVector(x, y));
       }
     }
@@ -94,7 +94,7 @@ void setup() {
 
   println(points.size() + " points.");
 
-  image(src, 0, 0);
+  //image(src, 0, 0);
 
   //fill(0, 255, 0);
   //for (PVector p : points) {
@@ -110,8 +110,8 @@ void setup() {
 
   print("Updating colors... ");
   // loop through every OTHER (x,y) position in image
-  for (int x = 0; x < src.width; x += 2) {    
-    for (int y = 0; y < src.height; y += 2) {
+  for (int x = 0; x < src.width; x += 1) {
+    for (int y = 0; y < src.height; y += 1) {
       PVector p = new PVector(x, y);  // construct PVector at this point
       color pixColor = src.get(x, y);  // get color of this pixel
       
@@ -119,6 +119,7 @@ void setup() {
       if (last != null && last.contains(p)) {
         // update color of this triangle to reflect average of pixels within it
         last.updateAvgColor((int) red(pixColor), (int) green(pixColor), (int) blue(pixColor));
+        
       } else {
         // linear search to find which triangle contains p
         for (Triangle t : delTri.triangles) {
@@ -126,7 +127,7 @@ void setup() {
           if (t.contains(p)) {
             // update color of this triangle to reflect average of pixels within it
             t.updateAvgColor((int) red(pixColor), (int) green(pixColor), (int) blue(pixColor));
-            
+
             // preserve reference to the container triangle of this point
             last = t;
   
@@ -140,7 +141,16 @@ void setup() {
   println("Done.");
 
   // display colored triangulation
-  //delTri.display();
+  delTri.display();
+   
+  //for (PVector p : points) {
+  //  if (p.x == 0 || p.x == dest.width - 1) {
+  //    println(p.x, p.y);
+  //    fill(0, 255,0);
+  //    ellipse(p.x, p.y, 10, 10);
+  //  }
+  //}
+  
 }
 
 // find squared difference between each color value of two adjacent pixels
