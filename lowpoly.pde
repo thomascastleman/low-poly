@@ -1,7 +1,7 @@
 
 import java.util.*;
 PImage src, dest;
-String url = "https://i.ytimg.com/vi/a_KqZdF4iNQ/maxresdefault.jpg"; // "https://i.kym-cdn.com/entries/icons/original/000/013/564/doge.jpg";
+String url = "https://i.ytimg.com/vi/a_KqZdF4iNQ/maxresdefault.jpg"; //  "https://i.kym-cdn.com/entries/icons/original/000/013/564/doge.jpg";
 
 void setup() {
   size(1280, 720);
@@ -52,25 +52,36 @@ void setup() {
       }
     }
   }
+  
+  println(dest.width - 1);
+  println(dest.height - 1);
 
   // list to keep track of all points placed on image
   ArrayList<PVector> points = new ArrayList<PVector>();
 
   int borderPointInterval = floor(dest.width / 9);
+  println("interval: " + borderPointInterval);
+  
+  for (int y = 0; y < dest.height; y++) {
+    if (y % borderPointInterval == 0 && y != 0 && y != dest.height - 1) {
+      points.add(new PVector(0, y));
+      points.add(new PVector(dest.width - 1, y));
+    }
+  }
 
   // loop through all (x,y) positions in image
   for (int x = 0; x < dest.width; x++) {
 
-    //// every n pixels, add a border
-    //if (x % borderPointInterval == 0) {
-    //  // add top and bottom of screen points
-    //  points.add(new PVector(x, 0));
-    //  points.add(new PVector(x, dest.height - 1));
-    //}
+    // every n pixels, add a border
+    if (x % borderPointInterval == 0) {
+      // add top and bottom of screen points
+      points.add(new PVector(x, 0));
+      points.add(new PVector(x, dest.height - 1));
+    }
 
     for (int y = 0; y < dest.height; y++) {
       //// every n pixels, add a border
-      //if (y % borderPointInterval == 0 && x == 0 && y != 0 && y != dest.height - 1) {
+      //if (y % borderPointInterval == 0 && (x == 0 || x == dest.width - 1) && (y != 0 && y != dest.height - 1)) {
       //  // add top and bottom of screen points
       //  points.add(new PVector(0, y));
       //  points.add(new PVector(dest.width - 1, y));
@@ -80,7 +91,7 @@ void setup() {
       float p = (float) (energies[x][y] / maxEnergy);
 
       // scale down P a bit so it's not so intense
-      p *= 0.25;
+      p *= 0.1;
 
       // debug: display the energy value in dest image
       dest.set(x, y, color((int) map((float) energies[x][y], 0, (float) maxEnergy, 0, (float) maxEnergy / 10)));
@@ -101,12 +112,51 @@ void setup() {
   //  // fill(src.get((int) p.x, (int) p.y));
   //  ellipse(p.x, p.y, 5, 5);
   //}
+  
+  for (int i = 0; i < points.size(); i++) {
+    for (int j = 0; j < points.size(); j++) {
+      PVector p1 = points.get(i), p2 = points.get(j);
+      if (i != j && p1.x == p2.x && p1.y == p2.y) {
+        println("Duplicate @ " + p1.x + ", " + p1.y);
+      }
+    }
+  }
 
   // compute Delaunay triangulation on set of points placed on image
   DelaunayTriangulation delTri = new DelaunayTriangulation(points);
+  
+  ArrayList<Triangle> legitBois = new ArrayList<Triangle>();
+  
+  for (Triangle t : delTri.triangles) {
+    if (t.area() > 0) {
+      legitBois.add(t);
+      
+      //t.r = 0;
+      //t.g = 0;
+      //t.b = 255;
+      
+      //t.display();
+      
+    } else {
+      println("area 0: (" + t.v1.x + ", " + t.v1.y + ") (" + t.v2.x + ", " + t.v2.y + ") (" + t.v3.x + ", " + t.v3.y + ")");
+      
+      //t.r = 255;
+      //t.g = 0;
+      //t.b = 0;
+      
+      //t.display();
+    }
+  }
+  
+  println(delTri.triangles.size() + " bois.");
+  println(legitBois.size() + " legit bois.");
+  
+  delTri.triangles = legitBois;
 
   // initialize previous container triangle randomly to start
   Triangle last = delTri.triangles.size() > 0 ? delTri.triangles.get(0) : null;
+  
+  println("(" + last.v1.x + ", " + last.v1.y + ") (" + last.v2.x + ", " + last.v2.y + ") (" + last.v3.x + ", " + last.v3.y + ")");
 
   print("Updating colors... ");
   // loop through every OTHER (x,y) position in image
@@ -130,6 +180,8 @@ void setup() {
 
             // preserve reference to the container triangle of this point
             last = t;
+            
+            //print("Changing ");
   
             break;
           }

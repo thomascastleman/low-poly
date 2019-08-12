@@ -37,6 +37,11 @@ class Triangle {
     return sameSide(p, this.v1, this.v2, this.v3) && sameSide(p, this.v2, this.v1, this.v3) && sameSide(p, this.v3, this.v1, this.v2);    
   }
   
+  // calculate and return the area of this triangle
+  float area() {
+    return abs(((float) ((this.v1.x * (this.v2.y - this.v3.y)) + (this.v2.x * (this.v3.y - this.v1.y)) + (this.v3.x * (this.v1.y - this.v2.y)))) / 2.0f);
+  }
+  
   // update the average color of pixels within this triangle
   void updateAvgColor(int r, int g, int b) {
     // re-average each color value
@@ -52,7 +57,7 @@ class Triangle {
     this.numPixels++;
   }
   
-  // debug: display a triangle
+  // display a triangle
   void display() {
     //stroke(255);
     //strokeWeight(1);
