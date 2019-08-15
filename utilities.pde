@@ -1,4 +1,9 @@
 
+// find squared difference between each color value of two adjacent pixels
+double gradient(color a, color b) {
+  return Math.pow(red(a) - red(b), 2) + Math.pow(green(a) - green(b), 2) + Math.pow(blue(a) - blue(b), 2);
+}
+
 // check if two vectors are equal
 boolean vecEq(PVector v1, PVector v2) {
   return v1.x == v2.x && v1.y == v2.y;
