@@ -6,7 +6,7 @@
 import java.util.*;
 
 PImage src;
-final String IMG_URL = "https://i.ytimg.com/vi/a_KqZdF4iNQ/maxresdefault.jpg"; //  "https://i.kym-cdn.com/entries/icons/original/000/013/564/doge.jpg";
+final String IMG_URL = "https://i.ytimg.com/vi/a_KqZdF4iNQ/maxresdefault.jpg"; // "http://www.kolumnmagazine.com/wp-content/uploads/2019/02/John-Coltrane__10a.jpg"; //  "https://i.kym-cdn.com/entries/icons/original/000/013/564/doge.jpg";
 final float ENERGY_SCALAR = 0.2;    // factor to scale down calculated energy of image (reduces number of points placed in point set)
 
 void setup() {
@@ -28,6 +28,9 @@ void setup() {
 
   // add color to triangulation based on pixel colors
   colorizeTriangulation(dt);
+  
+  // display original image under low poly form to fill in any gaps
+  image(src, 0, 0);
 
   // display colored triangulation
   dt.display();
