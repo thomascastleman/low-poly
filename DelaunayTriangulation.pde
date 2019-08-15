@@ -1,4 +1,7 @@
 
+/*
+    DelaunayTriangulation.pde: Class to handle construction of Delaunay Triangulation on a point set
+*/
 
 class DelaunayTriangulation {
   // triangle components of triangulation
@@ -160,12 +163,9 @@ class DelaunayTriangulation {
     return new Triangle(v1, v2, v3);
   }
   
-  // debug: display the triangulation
+  // display the triangulation
   void display() {
-    //stroke(255);
-    //strokeWeight(2);
-    //noFill();
-    
+    // display each individual triangle
     for (Triangle t : this.triangles) {
       t.display();
     }

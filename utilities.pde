@@ -1,4 +1,8 @@
 
+/*
+    utilities.pde: Utility functions
+*/
+
 // find squared difference between each color value of two adjacent pixels
 double gradient(color a, color b) {
   return Math.pow(red(a) - red(b), 2) + Math.pow(green(a) - green(b), 2) + Math.pow(blue(a) - blue(b), 2);

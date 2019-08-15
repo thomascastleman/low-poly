@@ -1,10 +1,15 @@
 
+/*
+    Triangle.pde: Class to handle triangle information and functionality related to Delaunay triangulations
+*/
+
 class Triangle {
   PVector v1, v2, v3; // vertices of triangle
   PVector[] vertices;
   float r, g, b;      // average RGB values of pixels within this triangle
   long numPixels;      // number of pixels contained within this triangle
   boolean isBad;      // bad triangle flag for Delaunay triangulation
+  double area;        // area of this triangle
   
   Triangle(PVector p1, PVector p2, PVector p3) {
     this.vertices = new PVector[3];
@@ -38,8 +43,18 @@ class Triangle {
   }
   
   // calculate and return the area of this triangle
-  float area() {
-    return abs(((float) ((this.v1.x * (this.v2.y - this.v3.y)) + (this.v2.x * (this.v3.y - this.v1.y)) + (this.v3.x * (this.v1.y - this.v2.y)))) / 2.0f);
+  double area() {
+    // if area undefined, calculate & cache
+    if (this.area == 0.0f) {
+      this.area = ((double) ((this.v1.x * (this.v2.y - this.v3.y)) + (this.v2.x * (this.v3.y - this.v1.y)) + (this.v3.x * (this.v1.y - this.v2.y)))) / 2.0;
+      
+      // correct for negativity
+      if (this.area < 0) {
+        this.area *= -1;
+      }
+    }
+    
+    return this.area;
   }
   
   // update the average color of pixels within this triangle
@@ -49,19 +64,15 @@ class Triangle {
     this.g = (this.g * this.numPixels + g) / (this.numPixels + 1);
     this.b = (this.b * this.numPixels + b) / (this.numPixels + 1);
     
-    // println(this.numPixels);
-    
-    //print(this.r + ", " + this.g + ", " + this.b + "\n");
-    
     // increment the number of pixels contributing to this average
     this.numPixels++;
   }
   
   // display a triangle
   void display() {
-    //stroke(255);
-    //strokeWeight(1);
     noStroke();
+    //strokeWeight(1);
+    //stroke(this.r, this.g, this.b);
     fill(this.r, this.g, this.b);
     triangle(this.v1.x, this.v1.y, this.v2.x, this.v2.y, this.v3.x, this.v3.y);
     

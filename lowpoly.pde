@@ -1,9 +1,13 @@
 
+/*
+    lowpoly.pde: Main file with full logic of low poly process
+*/
+
 import java.util.*;
 
 PImage src;
 final String IMG_URL = "https://i.ytimg.com/vi/a_KqZdF4iNQ/maxresdefault.jpg"; //  "https://i.kym-cdn.com/entries/icons/original/000/013/564/doge.jpg";
-final float ENERGY_SCALAR = 0.1;    // factor to scale down calculated energy of image (reduces number of points placed in point set)
+final float ENERGY_SCALAR = 0.2;    // factor to scale down calculated energy of image (reduces number of points placed in point set)
 
 void setup() {
   fullScreen();
@@ -17,62 +21,16 @@ void setup() {
   println(points.size() + " points in point set.");
 
   // compute Delaunay triangulation on set of points placed on image
-  DelaunayTriangulation delTri = new DelaunayTriangulation(points);
+  DelaunayTriangulation dt = new DelaunayTriangulation(points);
   
-  ArrayList<Triangle> legitBois = new ArrayList<Triangle>();
-  
-  for (Triangle t : delTri.triangles) {
-    if (t.area() > 0) {
-      legitBois.add(t);
-    } else {
-      println("area 0: (" + t.v1.x + ", " + t.v1.y + ") (" + t.v2.x + ", " + t.v2.y + ") (" + t.v3.x + ", " + t.v3.y + ")");
-    }
-  }
-  
-  println(delTri.triangles.size() + " bois.");
-  println(legitBois.size() + " legit bois.");
-  
-  delTri.triangles = legitBois;
+  // remove any triangles with zero area
+  removeZeroAreaTriangles(dt);
 
-  // initialize previous container triangle randomly to start
-  Triangle last = delTri.triangles.size() > 0 ? delTri.triangles.get(0) : null;
-  
-  println("(" + last.v1.x + ", " + last.v1.y + ") (" + last.v2.x + ", " + last.v2.y + ") (" + last.v3.x + ", " + last.v3.y + ")");
-
-  print("Updating colors... ");
-  // loop through every OTHER (x,y) position in image
-  for (int x = 0; x < src.width; x += 2) {
-    for (int y = 0; y < src.height; y += 2) {
-      PVector p = new PVector(x, y);  // construct PVector at this point
-      color pixColor = src.get(x, y);  // get color of this pixel
-      
-      // if this point shares same container triangle as the previous point, don't search
-      if (last != null && last.contains(p)) {
-        // update color of this triangle to reflect average of pixels within it
-        last.updateAvgColor((int) red(pixColor), (int) green(pixColor), (int) blue(pixColor));
-        
-      } else {
-        // linear search to find which triangle contains p
-        for (Triangle t : delTri.triangles) {
-          // if point within triangle
-          if (t.contains(p)) {
-            // update color of this triangle to reflect average of pixels within it
-            t.updateAvgColor((int) red(pixColor), (int) green(pixColor), (int) blue(pixColor));
-
-            // preserve reference to the container triangle of this point
-            last = t;
-  
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  println("Done.");
+  // add color to triangulation based on pixel colors
+  colorizeTriangulation(dt);
 
   // display colored triangulation
-  delTri.display();
+  dt.display();
 }
 
 /*  Generate a set of points on an image based on dual gradient energy, 
@@ -141,4 +99,67 @@ ArrayList<PVector> generatePointSet(PImage img) {
   }
   
   return points;
+}
+
+/*  Remove triangles with 0 area from the triangulation, as they cause 
+    the contains() function to believe that every point is inside the triangle. */
+void removeZeroAreaTriangles(DelaunayTriangulation dt) {
+  ArrayList<Triangle> nonZero = new ArrayList<Triangle>();
+  
+  // for each triangle in triangulation
+  for (Triangle t : dt.triangles) {
+    if (t.area() > 0.0) {
+      nonZero.add(t);
+    } else {
+      // -------- debug: print triangles with zero area ------------
+      println("area 0: (" + t.v1.x + ", " + t.v1.y + ") (" + t.v2.x + ", " + t.v2.y + ") (" + t.v3.x + ", " + t.v3.y + ")");
+    }
+  }
+  
+  // ------- debug: see how many were removed ---------------
+  println(dt.triangles.size() + " bois.");
+  println(nonZero.size() + " legit bois.");
+  
+  // overwrite original set of triangles with new set
+  dt.triangles = nonZero;
+}
+
+/*  Update the R, G, and B values of each triangle in a 
+    triangulation to reflect the underlying pixels */
+void colorizeTriangulation(DelaunayTriangulation dt) {
+  // initialize previous container triangle randomly to start
+  Triangle last = dt.triangles.size() > 0 ? dt.triangles.get(0) : null;
+  
+  print("Updating colors... ");
+  
+  // loop through every OTHER (x,y) position in image
+  for (int x = 0; x < src.width; x += 2) {
+    for (int y = 0; y < src.height; y += 2) {
+      PVector p = new PVector(x, y);  // construct PVector at this point
+      color pixColor = src.get(x, y);  // get color of this pixel
+      
+      // if this point shares same container triangle as the previous point, don't search
+      if (last != null && last.contains(p)) {
+        // update color of this triangle to reflect average of pixels within it
+        last.updateAvgColor((int) red(pixColor), (int) green(pixColor), (int) blue(pixColor));
+        
+      } else {
+        // linear search to find which triangle contains p
+        for (Triangle t : dt.triangles) {
+          // if point within triangle
+          if (t.contains(p)) {
+            // update color of this triangle to reflect average of pixels within it
+            t.updateAvgColor((int) red(pixColor), (int) green(pixColor), (int) blue(pixColor));
+
+            // preserve reference to the container triangle of this point
+            last = t;
+  
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  println("Done.");
 }
