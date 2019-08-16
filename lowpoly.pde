@@ -14,34 +14,43 @@ void setup() {
 
   // load requested image
   src = loadImage(IMG_URL);
-
-  // create a point set reflecting the energy of the src image
-  ArrayList<PVector> points = generatePointSet(src);
-
-  println(points.size() + " points in point set.");
-
-  // compute Delaunay triangulation on set of points placed on image
-  DelaunayTriangulation dt = new DelaunayTriangulation(points);
   
-  // remove any triangles with zero area
-  removeZeroAreaTriangles(dt);
-
-  // add color to triangulation based on pixel colors
-  colorizeTriangulation(dt);
+  // array for storing relative energy of each pixel
+  double[][] energies = new double[src.width][src.height];
   
-  // display original image under low poly form to fill in any gaps
-  image(src, 0, 0);
+  PImage blur = modifiedGaussianBlur(src, energies);
+  
+  image(blur, 0, 0);
+  
+  
 
-  // display colored triangulation
-  dt.display();
+  //// create a point set reflecting the energy of the src image
+  //ArrayList<PVector> points = generatePointSet(energies, src);
+
+  //println(points.size() + " points in point set.");
+
+  //// compute Delaunay triangulation on set of points placed on image
+  //DelaunayTriangulation dt = new DelaunayTriangulation(points);
+  
+  //// remove any triangles with zero area
+  //removeZeroAreaTriangles(dt);
+
+  //// add color to triangulation based on pixel colors
+  //colorizeTriangulation(src, dt);
+  
+  //// display original image under low poly form to fill in any gaps
+  //// image(src, 0, 0);
+
+  //// display colored triangulation
+  //dt.display();
 }
 
 /*  Generate a set of points on an image based on dual gradient energy, 
     where more points are placed in areas of greater energy,
-    and fewer in areas with less energy */
-ArrayList<PVector> generatePointSet(PImage img) {
-  double maxEnergy = 0;                                       // maximum energy value for later relativization
-  double[][] energies = new double[img.width][img.height];    // array for storing energy of each pixel
+    and fewer in areas with less energy.
+    Cache the relativized energy value of each pixel in an energies matrix. */
+ArrayList<PVector> generatePointSet(double[][] energies, PImage img) {
+  double maxEnergy = 0;  // maximum energy value for later relativization
 
   // loop through all fully surrounded (x,y) positions in image
   for (int x = 1; x < img.width - 1; x++) {
@@ -92,6 +101,9 @@ ArrayList<PVector> generatePointSet(PImage img) {
       /*  calculate probability for a point to be placed at this 
           pixel's position based on the energy at this pixel */
       float p = (float) (energies[x][y] / maxEnergy) * ENERGY_SCALAR;
+      
+      // cache relative energy in energies matrix
+      energies[x][y] /= maxEnergy;
 
       /*  choose probabilistically to add a point at this position or not,
           and don't ever place them at the border positions (could already exist there) */
@@ -129,23 +141,23 @@ void removeZeroAreaTriangles(DelaunayTriangulation dt) {
 
 /*  Update the R, G, and B values of each triangle in a 
     triangulation to reflect the underlying pixels */
-void colorizeTriangulation(DelaunayTriangulation dt) {
+void colorizeTriangulation(PImage img, DelaunayTriangulation dt) {
   // initialize previous container triangle randomly to start
   Triangle last = dt.triangles.size() > 0 ? dt.triangles.get(0) : null;
   
   print("Updating colors... ");
   
   // loop through every OTHER (x,y) position in image
-  for (int x = 0; x < src.width; x += 2) {
-    for (int y = 0; y < src.height; y += 2) {
+  for (int x = 0; x < img.width; x += 2) {
+    for (int y = 0; y < img.height; y += 2) {
       PVector p = new PVector(x, y);  // construct PVector at this point
-      color pixColor = src.get(x, y);  // get color of this pixel
-      
+      color pixColor = img.get(x, y);  // get color of this pixel
+
       // if this point shares same container triangle as the previous point, don't search
       if (last != null && last.contains(p)) {
         // update color of this triangle to reflect average of pixels within it
         last.updateAvgColor((int) red(pixColor), (int) green(pixColor), (int) blue(pixColor));
-        
+
       } else {
         // linear search to find which triangle contains p
         for (Triangle t : dt.triangles) {
@@ -165,4 +177,50 @@ void colorizeTriangulation(DelaunayTriangulation dt) {
   }
 
   println("Done.");
+}
+
+// Gaussian blur kernel
+final double[][] kernel = {
+  { 0.00000067,  0.00002292,  0.00019117,  0.00038771,  0.00019117,  0.00002292,  0.00000067 },
+  { 0.00002292,  0.00078633,  0.00655965,  0.01330373,  0.00655965,  0.00078633,  0.00002292 },
+  { 0.00019117,  0.00655965,  0.05472157,  0.11098164,  0.05472157,  0.00655965,  0.00019117 },
+  { 0.00038771,  0.01330373,  0.11098164,  0.22508352,  0.11098164,  0.01330373,  0.00038771 },
+  { 0.00019117,  0.00655965,  0.05472157,  0.11098164,  0.05472157,  0.00655965,  0.00019117 },
+  { 0.00002292,  0.00078633,  0.00655965,  0.01330373,  0.00655965,  0.00078633,  0.00002292 },
+  { 0.00000067,  0.00002292,  0.00019117,  0.00038771,  0.00019117,  0.00002292,  0.00000067 }
+};
+
+/*  Compute a variant of the Gaussian blur of an image, 
+    with less blurring in detailed areas and more blurring in less important areas. */
+PImage modifiedGaussianBlur(PImage img, double[][] energies) {
+  img.loadPixels();
+  PImage blur = createImage(img.width, img.height, RGB);
+  
+  // iterate over pixels
+  for (int x = 3; x < img.width - 3; x++) {
+    for (int y = 3; y < img.height - 3; y++) {
+      float sumR = 0, sumG = 0, sumB = 0;
+      
+      // for each position in the kernel
+      for (int ky = -3; ky <= 3; ky++) {
+        for (int kx = -3; kx <= 3; kx++) {
+          // calculate position of actual pixel in pixels array
+          int pos = (y + ky) * img.width + (x + kx);
+          
+          // add kernel-scaled color values to their respective sums
+          sumR += kernel[ky + 3][kx + 3] * red(img.pixels[pos]);
+          sumG += kernel[ky + 3][kx + 3] * green(img.pixels[pos]);
+          sumB += kernel[ky + 3][kx + 3] * blue(img.pixels[pos]);
+        }
+      }
+      
+      // in blurred image, set pixel color based on kernel sums
+      blur.pixels[y * img.width + x] = color(sumR, sumG, sumB);
+    }
+  }
+  
+  // apply changes to pixels in blurred image
+  blur.updatePixels();
+  
+  return blur;
 }
