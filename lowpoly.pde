@@ -6,8 +6,9 @@
 import java.util.*;
 
 PImage src;
-final String IMG_URL = "https://i.ytimg.com/vi/a_KqZdF4iNQ/maxresdefault.jpg"; // "http://www.kolumnmagazine.com/wp-content/uploads/2019/02/John-Coltrane__10a.jpg"; //  "https://i.kym-cdn.com/entries/icons/original/000/013/564/doge.jpg";
-final float ENERGY_SCALAR = 0.2;    // factor to scale down calculated energy of image (reduces number of points placed in point set)
+final boolean LOGGING = true;  // allow logs to console
+final String IMG_URL =  "https://yatra8exe7uvportalprd.blob.core.windows.net/images/products/HighStDonated/Zoom/HD_101153233_01.jpg"; // "/home/tcastleman/Downloads/christmas.jpeg"; // "https://ichef.bbci.co.uk/images/ic/720x405/p0517py6.jpg"; // "https://i.ytimg.com/vi/a_KqZdF4iNQ/maxresdefault.jpg"; // "http://www.kolumnmagazine.com/wp-content/uploads/2019/02/John-Coltrane__10a.jpg"; //  "https://i.kym-cdn.com/entries/icons/original/000/013/564/doge.jpg";
+final float ENERGY_SCALAR = 0.15;    // factor to scale down calculated energy of image (reduces number of points placed in point set)
 
 void setup() {
   fullScreen();
@@ -18,31 +19,34 @@ void setup() {
   // array for storing relative energy of each pixel
   double[][] energies = new double[src.width][src.height];
   
-  PImage blur = modifiedGaussianBlur(src, energies);
+  // get blur kernel
+  double[][] kernel = getKernel(9);
   
+  // compute blurred image
+  PImage blur = modifiedGaussianBlur(src, energies, kernel);
+  
+  
+  // create a point set reflecting the energy of the src image
+  ArrayList<PVector> points = generatePointSet(energies, src);
+
+  println(points.size() + " points in point set.");
+
+  // compute Delaunay triangulation on set of points placed on image
+  DelaunayTriangulation dt = new DelaunayTriangulation(points);
+  
+  // remove any triangles with zero area
+  // removeZeroAreaTriangles(dt);
+
+  // add color to triangulation based on blurred image
+  blurColorizeTriangulation(blur, dt);
+  
+  scale(0.9);  // scale down so we can see the full image
+  
+  // display blurred image under low poly form to fill in any gaps
   image(blur, 0, 0);
-  
-  
 
-  //// create a point set reflecting the energy of the src image
-  //ArrayList<PVector> points = generatePointSet(energies, src);
-
-  //println(points.size() + " points in point set.");
-
-  //// compute Delaunay triangulation on set of points placed on image
-  //DelaunayTriangulation dt = new DelaunayTriangulation(points);
-  
-  //// remove any triangles with zero area
-  //removeZeroAreaTriangles(dt);
-
-  //// add color to triangulation based on pixel colors
-  //colorizeTriangulation(src, dt);
-  
-  //// display original image under low poly form to fill in any gaps
-  //// image(src, 0, 0);
-
-  //// display colored triangulation
-  //dt.display();
+  // display colored triangulation
+  dt.display();
 }
 
 /*  Generate a set of points on an image based on dual gradient energy, 
@@ -50,6 +54,8 @@ void setup() {
     and fewer in areas with less energy.
     Cache the relativized energy value of each pixel in an energies matrix. */
 ArrayList<PVector> generatePointSet(double[][] energies, PImage img) {
+  if (LOGGING) print("Generating point set... ");
+  
   double maxEnergy = 0;  // maximum energy value for later relativization
 
   // loop through all fully surrounded (x,y) positions in image
@@ -113,6 +119,8 @@ ArrayList<PVector> generatePointSet(double[][] energies, PImage img) {
     }
   }
   
+  if (LOGGING) println("Done.");
+  
   return points;
 }
 
@@ -142,10 +150,10 @@ void removeZeroAreaTriangles(DelaunayTriangulation dt) {
 /*  Update the R, G, and B values of each triangle in a 
     triangulation to reflect the underlying pixels */
 void colorizeTriangulation(PImage img, DelaunayTriangulation dt) {
+  if (LOGGING) print("Colorizing triangulation (avg method)... ");
+  
   // initialize previous container triangle randomly to start
   Triangle last = dt.triangles.size() > 0 ? dt.triangles.get(0) : null;
-  
-  print("Updating colors... ");
   
   // loop through every OTHER (x,y) position in image
   for (int x = 0; x < img.width; x += 2) {
@@ -176,41 +184,87 @@ void colorizeTriangulation(PImage img, DelaunayTriangulation dt) {
     }
   }
 
-  println("Done.");
+  if (LOGGING) println("Done.");
 }
 
-// Gaussian blur kernel
-final double[][] kernel = {
-  { 0.00000067,  0.00002292,  0.00019117,  0.00038771,  0.00019117,  0.00002292,  0.00000067 },
-  { 0.00002292,  0.00078633,  0.00655965,  0.01330373,  0.00655965,  0.00078633,  0.00002292 },
-  { 0.00019117,  0.00655965,  0.05472157,  0.11098164,  0.05472157,  0.00655965,  0.00019117 },
-  { 0.00038771,  0.01330373,  0.11098164,  0.22508352,  0.11098164,  0.01330373,  0.00038771 },
-  { 0.00019117,  0.00655965,  0.05472157,  0.11098164,  0.05472157,  0.00655965,  0.00019117 },
-  { 0.00002292,  0.00078633,  0.00655965,  0.01330373,  0.00655965,  0.00078633,  0.00002292 },
-  { 0.00000067,  0.00002292,  0.00019117,  0.00038771,  0.00019117,  0.00002292,  0.00000067 }
-};
+/*  Use the blur of the source image to colorize each triangle by taking
+    the color of the pixel located at the centroid of each triangle. 
+    (Credit to Johnny Lindbergh) */
+void blurColorizeTriangulation(PImage blur, DelaunayTriangulation dt) {
+  if (LOGGING) print("Colorizing triangulation (blur method)... ");
+  
+  // for each triangle in triangulation
+  for (Triangle t : dt.triangles) {
+    // compute centroid
+    int cx = floor((t.v1.x + t.v2.x + t.v3.x) / 3.0);
+    int cy = floor((t.v1.y + t.v2.y + t.v3.y) / 3.0);
+    
+    // get color of pixel at centroid
+    color c = blur.get(cx, cy);
+    
+    // set triangle color
+    t.r = red(c);
+    t.g = green(c);
+    t.b = blue(c);
+  }
+  
+  if (LOGGING) println("Done.");
+}
+
+/*  Get an n x n kernel */
+double[][] getKernel(int n) {
+  double[][] k = new double[n][n];
+  float sq = n * n;
+  
+  // build n x n kernel with values 1 / (n^2)
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      k[i][j] = 1 / sq;
+    }
+  }
+  
+  return k;
+}
+
+//{
+//  { 0.00000067,  0.00002292,  0.00019117,  0.00038771,  0.00019117,  0.00002292,  0.00000067 },
+//  { 0.00002292,  0.00078633,  0.00655965,  0.01330373,  0.00655965,  0.00078633,  0.00002292 },
+//  { 0.00019117,  0.00655965,  0.05472157,  0.11098164,  0.05472157,  0.00655965,  0.00019117 },
+//  { 0.00038771,  0.01330373,  0.11098164,  0.22508352,  0.11098164,  0.01330373,  0.00038771 },
+//  { 0.00019117,  0.00655965,  0.05472157,  0.11098164,  0.05472157,  0.00655965,  0.00019117 },
+//  { 0.00002292,  0.00078633,  0.00655965,  0.01330373,  0.00655965,  0.00078633,  0.00002292 },
+//  { 0.00000067,  0.00002292,  0.00019117,  0.00038771,  0.00019117,  0.00002292,  0.00000067 }
+//};
 
 /*  Compute a variant of the Gaussian blur of an image, 
     with less blurring in detailed areas and more blurring in less important areas. */
-PImage modifiedGaussianBlur(PImage img, double[][] energies) {
+PImage modifiedGaussianBlur(PImage img, double[][] energies, double[][] kernel) {
+  if (LOGGING) print("Computing blur of source image... ");
+  
   img.loadPixels();
   PImage blur = createImage(img.width, img.height, RGB);
   
+  // compute half size of kernel for indexing
+  int halfK = floor(kernel.length / 2);
+  
   // iterate over pixels
-  for (int x = 3; x < img.width - 3; x++) {
-    for (int y = 3; y < img.height - 3; y++) {
+  for (int x = 0; x < img.width; x++) {
+    for (int y = 0; y < img.height; y++) {
       float sumR = 0, sumG = 0, sumB = 0;
       
       // for each position in the kernel
-      for (int ky = -3; ky <= 3; ky++) {
-        for (int kx = -3; kx <= 3; kx++) {
-          // calculate position of actual pixel in pixels array
-          int pos = (y + ky) * img.width + (x + kx);
-          
-          // add kernel-scaled color values to their respective sums
-          sumR += kernel[ky + 3][kx + 3] * red(img.pixels[pos]);
-          sumG += kernel[ky + 3][kx + 3] * green(img.pixels[pos]);
-          sumB += kernel[ky + 3][kx + 3] * blue(img.pixels[pos]);
+      for (int ky = -halfK; ky <= halfK; ky++) {
+        for (int kx = -halfK; kx <= halfK; kx++) {
+          // if position valid (not outside image)
+          if (y + ky >= 0 && x + kx >= 0 && y + ky < img.height && x + kx < img.width) {          
+            // calculate position of actual pixel in pixels array
+            int pos = (y + ky) * img.width + (x + kx);
+            
+            // add kernel-scaled color values to their respective sums
+            sumR += kernel[ky + halfK][kx + halfK] * red(img.pixels[pos]);
+            sumG += kernel[ky + halfK][kx + halfK] * green(img.pixels[pos]);
+            sumB += kernel[ky + halfK][kx + halfK] * blue(img.pixels[pos]);
+          }
         }
       }
       
@@ -221,6 +275,8 @@ PImage modifiedGaussianBlur(PImage img, double[][] energies) {
   
   // apply changes to pixels in blurred image
   blur.updatePixels();
+  
+  if (LOGGING) println("Done.");
   
   return blur;
 }
