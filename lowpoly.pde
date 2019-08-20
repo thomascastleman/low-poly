@@ -7,8 +7,9 @@ import java.util.*;
 
 PImage src;
 final boolean LOGGING = true;  // allow logs to console
-final String IMG_URL =  "https://yatra8exe7uvportalprd.blob.core.windows.net/images/products/HighStDonated/Zoom/HD_101153233_01.jpg"; // "/home/tcastleman/Downloads/christmas.jpeg"; // "https://ichef.bbci.co.uk/images/ic/720x405/p0517py6.jpg"; // "https://i.ytimg.com/vi/a_KqZdF4iNQ/maxresdefault.jpg"; // "http://www.kolumnmagazine.com/wp-content/uploads/2019/02/John-Coltrane__10a.jpg"; //  "https://i.kym-cdn.com/entries/icons/original/000/013/564/doge.jpg";
-final float ENERGY_SCALAR = 0.15;    // factor to scale down calculated energy of image (reduces number of points placed in point set)
+final String IMG_URL = "https://i.ytimg.com/vi/a_KqZdF4iNQ/maxresdefault.jpg"; //  "https://ichef.bbci.co.uk/images/ic/720x405/p0517py6.jpg"; // "http://www.kolumnmagazine.com/wp-content/uploads/2019/02/John-Coltrane__10a.jpg"; //  "https://i.kym-cdn.com/entries/icons/original/000/013/564/doge.jpg";
+final float ENERGY_SCALAR = 0.13;    // factor to scale down calculated energy of image (reduces number of points placed in point set)
+final int MAX_KERNEL_DIM = 21;  // dimensions of largest kernel possible used to blur image
 
 void setup() {
   fullScreen();
@@ -19,28 +20,25 @@ void setup() {
   // array for storing relative energy of each pixel
   double[][] energies = new double[src.width][src.height];
   
-  // get blur kernel
-  double[][] kernel = getKernel(9);
-  
-  // compute blurred image
-  PImage blur = modifiedGaussianBlur(src, energies, kernel);
-  
-  
   // create a point set reflecting the energy of the src image
   ArrayList<PVector> points = generatePointSet(energies, src);
 
   println(points.size() + " points in point set.");
+  
+  //double[][] kernel = getKernel(11);
+  //energies = blurEnergyMatrix(energies, kernel);
+  
+  // compute blurred image
+  double[][] kernel = getKernel(21);
+  PImage blur = boxBlur(src, kernel); //energyDependentBoxBlur(src, energies);
 
   // compute Delaunay triangulation on set of points placed on image
   DelaunayTriangulation dt = new DelaunayTriangulation(points);
-  
-  // remove any triangles with zero area
-  // removeZeroAreaTriangles(dt);
 
   // add color to triangulation based on blurred image
   blurColorizeTriangulation(blur, dt);
   
-  scale(0.9);  // scale down so we can see the full image
+  scale(1);  // scale down so we can see the full image
   
   // display blurred image under low poly form to fill in any gaps
   image(blur, 0, 0);
@@ -226,20 +224,10 @@ double[][] getKernel(int n) {
   return k;
 }
 
-//{
-//  { 0.00000067,  0.00002292,  0.00019117,  0.00038771,  0.00019117,  0.00002292,  0.00000067 },
-//  { 0.00002292,  0.00078633,  0.00655965,  0.01330373,  0.00655965,  0.00078633,  0.00002292 },
-//  { 0.00019117,  0.00655965,  0.05472157,  0.11098164,  0.05472157,  0.00655965,  0.00019117 },
-//  { 0.00038771,  0.01330373,  0.11098164,  0.22508352,  0.11098164,  0.01330373,  0.00038771 },
-//  { 0.00019117,  0.00655965,  0.05472157,  0.11098164,  0.05472157,  0.00655965,  0.00019117 },
-//  { 0.00002292,  0.00078633,  0.00655965,  0.01330373,  0.00655965,  0.00078633,  0.00002292 },
-//  { 0.00000067,  0.00002292,  0.00019117,  0.00038771,  0.00019117,  0.00002292,  0.00000067 }
-//};
-
 /*  Compute a variant of the Gaussian blur of an image, 
     with less blurring in detailed areas and more blurring in less important areas. */
-PImage modifiedGaussianBlur(PImage img, double[][] energies, double[][] kernel) {
-  if (LOGGING) print("Computing blur of source image... ");
+PImage boxBlur(PImage img, double[][] kernel) {
+  if (LOGGING) print("Computing box blur of source image... ");
   
   img.loadPixels();
   PImage blur = createImage(img.width, img.height, RGB);
@@ -251,6 +239,116 @@ PImage modifiedGaussianBlur(PImage img, double[][] energies, double[][] kernel) 
   for (int x = 0; x < img.width; x++) {
     for (int y = 0; y < img.height; y++) {
       float sumR = 0, sumG = 0, sumB = 0;
+      
+      // for each position in the kernel
+      for (int ky = -halfK; ky <= halfK; ky++) {
+        for (int kx = -halfK; kx <= halfK; kx++) {
+          // if position valid (not outside image)
+          if (y + ky >= 0 && x + kx >= 0 && y + ky < img.height && x + kx < img.width) {          
+            // calculate position of actual pixel in pixels array
+            int pos = (y + ky) * img.width + (x + kx);
+            
+            // add kernel-scaled color values to their respective sums
+            sumR += kernel[ky + halfK][kx + halfK] * red(img.pixels[pos]);
+            sumG += kernel[ky + halfK][kx + halfK] * green(img.pixels[pos]);
+            sumB += kernel[ky + halfK][kx + halfK] * blue(img.pixels[pos]);
+          }
+        }
+      }
+      
+      // in blurred image, set pixel color based on kernel sums
+      blur.pixels[y * img.width + x] = color(sumR, sumG, sumB);
+    }
+  }
+  
+  // apply changes to pixels in blurred image
+  blur.updatePixels();
+  
+  if (LOGGING) println("Done.");
+  
+  return blur;
+}
+
+/*  Perform simple box blur on energy matrix */
+double[][] blurEnergyMatrix(double[][] energies, double[][] kernel) {
+  if (LOGGING) print("Computing box blur of energy matrix... ");
+  
+  // initialize blur matrix of same dimensions
+  double[][] blur = new double[energies.length][energies[0].length];
+  
+  // compute half size of kernel for indexing
+  int halfK = floor(kernel.length / 2);
+  double max = 0;
+  
+  // iterate over pixels
+  for (int x = 0; x < energies.length; x++) {
+    for (int y = 0; y < energies[x].length; y++) {
+      float sum = 0;
+      
+      // for each position in the kernel
+      for (int ky = -halfK; ky <= halfK; ky++) {
+        for (int kx = -halfK; kx <= halfK; kx++) {
+          // if position valid
+          if (y + ky >= 0 && x + kx >= 0 && y + ky < energies[x].length && x + kx < energies.length) {          
+            // add kernel-scaled color values to their respective sums
+            sum += kernel[ky + halfK][kx + halfK] * energies[x + kx][y + ky];
+          }
+        }
+      }
+      
+      // in blurred image, set pixel color based on kernel sums
+      blur[x][y] = sum;
+      
+      // record max energy value
+      if (sum > max) {
+        max = sum;
+      }
+    }
+  }
+  
+  // iterate over pixels, relativize again
+  for (int x = 0; x < blur.length; x++) {
+    for (int y = 0; y < blur[x].length; y++) {
+      blur[x][y] /= max;
+    }
+  }
+  
+  if (LOGGING) println("Done.");
+  
+  return blur;
+}
+
+/*  Compute a variant of a box blur of an image, 
+    with less blurring in detailed areas and more blurring in less important areas. */
+PImage energyDependentBoxBlur(PImage img, double[][] energies) {
+  if (LOGGING) print("Computing energy-dependent box blur of source image... ");
+  
+  img.loadPixels();
+  PImage blur = createImage(img.width, img.height, RGB);
+  
+  /*  Compute number of required kernels.
+      Every kernel from 1x1 to NxN will be constructed to provide
+      variation in blurring */
+  double[][][] kernels = new double[ceil(MAX_KERNEL_DIM / 2.0)][][];
+  double[][] kernel;
+  
+  // calculate values of each kernel
+  for (int i = 0; i < kernels.length; i++) {
+    kernels[i] = getKernel(2 * i + 1);
+  }
+  
+  // iterate over pixels
+  for (int x = 0; x < img.width; x++) {
+    for (int y = 0; y < img.height; y++) {
+      float sumR = 0, sumG = 0, sumB = 0;
+      
+      /*  Choose which kernel to use for this pixel based on energy at this location
+          Higher energy --> smaller kernel --> less blur
+          Lower energy --> larger kernel --> more blur */
+      kernel = kernels[(int) Math.floor((1 - energies[x][y]) * (kernels.length - 1))];
+      
+      // compute half size of kernel for indexing
+      int halfK = floor(kernel.length / 2);
       
       // for each position in the kernel
       for (int ky = -halfK; ky <= halfK; ky++) {

@@ -25,3 +25,16 @@ boolean sameSide(PVector p1, PVector p2, PVector a, PVector b) {
   
   return cp1.dot(cp2) >= 0;
 }
+
+// show energy values as grayscale image
+void showEnergyMatrix(double[][] energies) {
+  PImage e = new PImage(energies.length, energies[0].length);
+  
+  for (int x = 0; x < e.width; x++) {
+    for (int y = 0; y < e.height; y++) {
+      e.set(x, y, color((int) map((float) energies[x][y], 0, (float) 1, 0, 255)));
+    }
+  }
+  
+  image(e, 0, 0);
+}
